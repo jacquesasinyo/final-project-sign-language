@@ -1,0 +1,23 @@
+Fresh Claude session
+        ↓
+Read CLAUDE.md
+PROJECT_REQUIREMENTS.md
+progress + recent git
+        ↓
+PLAN MODE
+        ↓
+one bounded task
+        ↓
+you approve plan
+        ↓
+Claude implements
+        ↓
+tests / actual execution
+        ↓
+you inspect diff/results
+        ↓
+    commit
+        ↓
+update decisions/progress
+        ↓
+ end session

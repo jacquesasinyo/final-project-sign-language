@@ -1,0 +1,21 @@
+# Paths are relative to the repository root (DS-06).
+data_root: data/raw/AUTSL
+classes_file: configs/classes.yaml
+manifest_path: outputs/manifest.csv
+seq_len: 48   # PRE-03; see docs/decisions.md
+seed: 2026
+cache_dir: data/cache/landmarks   # raw MediaPipe landmarks, one .npz per clip
+runs_dir: outputs/runs
+
+train:            # MOD-05/07: patience and max epochs configurable; lr/batch as previous prototype
+  batch_size: 32
+  learning_rate: 0.001
+  max_epochs: 150
+  patience: 20
+
+demo:             # RT-02/RT-03, docs/decisions.md D-06
+  camera_index: 0
+  min_seconds: 1.5
+  max_seconds: 3.0
+  confidence_threshold: 0.0   # placeholder: chosen on the validation set later (RT-03)
+  flip_input: true   # D-08: flip webcam frames before MediaPipe so a right-handed user matches AUTSL
