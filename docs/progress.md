@@ -16,16 +16,19 @@
 - First git commit.
 
 ## Status
-Phase 2 complete except `docs/targets.md` (EVAL-10; proposed target needs revising
-upward, since M0 val is already 0.97).
+Spec v0.3 (2026-10-07) follows the signed EE4297 proposal: commitments O1–O5 (D-11).
+Demo vocabulary (D-12, 21 signs: 13 kept + 8 new) is separate from the 20-class benchmark:
+`configs/demo.yaml`, `outputs/manifest_demo.csv`, `outputs/runs_demo/`. Demo M0 trained: `outputs/runs_demo/20261007-161859_m0_full_s0`, val macro-F1 0.967; weakest:
+selam 0.87, hoscakal 0.89 (hoscakal→selam).
+
+Informal live check (D-13): demo M0, flip on, 21/21 signs correct on one try each (hoscakal 0.40, yok 0.90 confidence).
+O4 now uses the demo vocabulary; logged evaluation via `tsl.realtime --eval` + `scripts/live_report.py`.
 
 ## Known problems / open
-- Retest live with flip; check ben / mendil / tuvalet execution against references.
-- M1 headroom is small (M0 val 0.97); the improvement case may rest on protocol,
-  size and latency, and on the live demo. Discuss with the advisor.
-- Ideas beyond spec (student asked to raise them): hand-local + velocity features,
-  augmentation with hand dropout, seed ensembles, ST-GCN. To discuss.
-- Open: advisor (course requirements), TİD validator, Phase 0 table.
+- LIVE-01: decide how the 120 webcam trials are allocated.
+- PRE-06: per-sign semantic-safety check before any mirroring.
+- Open: TİD validator, course report requirements, Phase 0 table, `docs/targets.md`.
 
 ## Next step
-Phase 3: M1 (BiGRU + attention), ≤3 configs per model on val, freeze, `docs/targets.md`.
+Logged dev session (e.g. `--reps 2`) to get the first real live metrics; decide the LIVE-01 allocation of the 120
+trials. Gantt task now (12–25 Oct): M1 on the benchmark.

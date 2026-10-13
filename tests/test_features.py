@@ -62,3 +62,20 @@ def test_model_output_shape():
     from tsl.models import build_model
     m = build_model("m0", 48, N_FEATURES, 20)
     assert m(np.zeros((2, 48, N_FEATURES), np.float32)).shape == (2, 20)
+
+
+def test_live_summary():
+    from tsl.evaluate import live_summary
+    labels = ["a", "b", "c"]
+    trials = [dict(target="a", predicted="a", status="ok", latency_s="0.4", signer="x", condition="bright"),
+              dict(target="a", predicted="b", status="ok", latency_s="0.6", signer="x", condition="dim"),
+              dict(target="b", predicted="b", status="ok", latency_s="0.5", signer="y", condition="bright"),
+              dict(target="c", predicted="", status="no_hand", latency_s="0.5", signer="y", condition="dim"),
+              dict(target="c", predicted="", status="too_short", latency_s="", signer="y", condition="dim")]
+    r = live_summary(trials, labels)
+    assert r["n_trials"] == 4 and r["n_correct"] == 2 and r["no_prediction"] == 1  # too_short excluded
+    assert r["accuracy"] == 0.5 and r["per_class"]["c"]["recall"] == 0.0
+    assert r["accuracy_by_condition"] == {"bright": 1.0, "dim": 0.0}
+    assert r["latency_s"]["median"] == 0.5
+    lo, hi = r["accuracy_ci95"]
+    assert 0 < lo < 0.5 < hi < 1

@@ -1,0 +1,35 @@
+# Demo/application vocabulary (docs/decisions.md D-12). NOT the experimental benchmark:
+# configs/classes.yaml (20 classes, seed 2026) and its results stay unchanged.
+selection_rule: >-
+  Curated for the live demo, chosen before any model was trained on these classes, from
+  AUTSL training data only (no validation or test results). Kept: 13 benchmark classes
+  that were not unreliable in the informal live try-out and do not resemble a new sign.
+  Dropped: ben, mendil, tuvalet (failed live) and odun, hali, tarak, maas (the current
+  classes the new signs most resemble). Added: 8 useful words, preferring two-handed
+  signs with large movements, ranked by an exploratory landmark analysis of 10 train
+  clips (10 signers) per candidate.
+demo_phrase: "Selam! Yardım — hastane nerede? Tamam, teşekkür. Hoşçakal."
+kept_from_benchmark: [26, 57, 107, 128, 140, 146, 153, 159, 165, 196, 198, 215, 220]
+added: [15, 83, 93, 138, 173, 179, 186, 211]
+classes:
+  - {id: 15, tr: arkadas, en: friend}
+  - {id: 26, tr: bayram, en: feast}
+  - {id: 57, tr: duvar, en: wall}
+  - {id: 83, tr: hastane, en: hospital}
+  - {id: 93, tr: hoscakal, en: goodbye}
+  - {id: 107, tr: kavsak, en: crossroads}
+  - {id: 128, tr: masallah, en: god_preserve}
+  - {id: 138, tr: nerede, en: where}
+  - {id: 140, tr: ocak, en: oven}
+  - {id: 146, tr: olmaz, en: nope}
+  - {id: 153, tr: pantolon, en: trousers}
+  - {id: 159, tr: pencere, en: window}
+  - {id: 165, tr: saat, en: hour}
+  - {id: 173, tr: selam, en: hi}
+  - {id: 179, tr: sevmek, en: love}
+  - {id: 186, tr: tamam, en: okay}
+  - {id: 196, tr: tesekkur, en: thanks}
+  - {id: 198, tr: turkiye, en: turkey}
+  - {id: 211, tr: yardim, en: help}
+  - {id: 215, tr: yatak, en: bed}
+  - {id: 220, tr: yok, en: absent}

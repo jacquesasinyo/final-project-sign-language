@@ -154,3 +154,90 @@ Source: `scripts/inspect_clips.py` on 50 seeded train clips → `outputs/inspect
   an attention-only ablation.
 - Early stopping: patience 20 and at most 150 epochs (configurable, MOD-05); the old notebook used
   patience 15 on val loss.
+
+## D-11 Scope revision: five official commitments (2026-10-07)
+
+- **Decision:** `PROJECT_REQUIREMENTS.md` v0.3 and `CLAUDE.md` follow the signed proposal
+  (`EE4297_Project_Proposal_Jacques_Asinyo_Guney_Donmez.docx`, advisor Assoc. Prof. Fulya Çallıalp) and the Gantt
+  chart (2026-10-05). The finish line is O1–O5 (spec §2):
+  - O1: test macro-F1 ≥ 0.90;
+  - O2: M1 ≤ 1/3 of M0's parameters and within ~2 pp;
+  - O3: latency median ≤ 0.5 s / p95 ≤ 1.0 s on CPU;
+  - O4: 120 controlled webcam trials, top-1 ≥ 75%;
+  - O5: robustness analysis + ≥ 1 mitigation.
+
+  Internal targets (0.93, 1 pp, 0.3 s, 85%) are kept separate and are never promised.
+- **Why:** offline 20-class accuracy is near saturation (M0 val macro-F1 0.969, single seed). An exploratory,
+  unsaved analysis pointed to the live system as the weak part: concentrated per-signer errors, high-confidence
+  errors, a large drop on mirrored input, and ~2 s post-recording latency. That analysis must be re-run by a saved
+  script (ROB-03) before any figure is reported.
+- **Moved to stretch (§16):** the 226-class benchmark, other architectures/ensembles, calibration/top-3/RT-03,
+  ablations, extra signers, segmentation, TTS, embedded deployment.
+- **Changed requirements:**
+  - M1 is reframed as an efficient model (MOD-02);
+  - RT-05 is replaced by LIVE-01..05;
+  - streaming extraction is added (RT-01, PRE-07);
+  - mirroring needs a per-sign semantic-safety check first (PRE-06);
+  - EVAL-11 (offline-to-live gap) and ROB-01..03 are new.
+- **Open:** the allocation of the 120 trials (it does not divide evenly over 20 signs × 2 signers × 2 conditions)
+  must be decided before the webcam development session (LIVE-01).
+
+## D-12 Separate demo/application vocabulary (2026-10-07)
+
+- **Decision:** a second class list, `configs/demo_classes.yaml` (21 signs), used only for the live demo.
+  It has its own config `configs/demo.yaml`, which inherits `default.yaml`, plus its own manifest
+  (`outputs/manifest_demo.csv`) and runs folder (`outputs/runs_demo/`). The 20-class benchmark
+  (`configs/classes.yaml`) and all its results are unchanged and remain the experimental benchmark (O1/O2).
+  Both share the same pipeline and landmark cache.
+- **Why:** to minimise further development time. Several benchmark classes were unreliable live, and fixing
+  individual classes was ruled out for now.
+- **Selection** (curated rule, DS-02 b; AUTSL training data only, no validation or test results):
+  - **dropped:** ben, mendil and tuvalet (failed live with both hands); odun, hali, tarak and maas (the
+    benchmark classes the new signs most resemble, and not useful words);
+  - **kept (13):** bayram, duvar, kavsak, masallah, ocak, olmaz, pantolon, pencere, saat, tesekkur, turkiye,
+    yatak, yok;
+  - **added (8):** yardim, nerede, hastane, arkadas, hoscakal, tamam, sevmek, selam.
+- **Evidence (exploratory, not saved):** MediaPipe on 10 train clips from 10 signers per candidate
+  (28 candidates). One-handed classes had much lower trajectory distinctiveness (leave-one-out nearest
+  centroid) than two-handed ones, and all live failures were one-handed. So two-handed signs with large
+  movements were preferred, among useful words that exist in AUTSL:
+  - yardim 0.9, nerede 0.8, arkadas 0.7, hastane 0.6;
+  - hoscakal 0.6 and sevmek 0.6 (one-handed);
+  - tamam 0.5 (finger-dependent, 96 train clips);
+  - selam 0.3 (kept as the greeting; it resembled tarak, which is dropped).
+
+  Rejected: gecmis_olsun (resembles tesekkur), doktor (resembles saat; only 10 test clips), and the small
+  one-handed signs (evet, hayir, anne, baba, kim, nasil, ...). Reserves: cocuk, ozur_dilemek.
+- **Demo phrase:** "Selam! Yardım — hastane nerede? Tamam, teşekkür. Hoşçakal."
+- **Open:** whether the controlled webcam evaluation (O4) uses the benchmark or the demo vocabulary. The
+  spec currently says the 20-class benchmark. Decide before the webcam dev session and update spec
+  LIVE-01 if it changes.
+- **First demo model (2026-10-07):** `outputs/runs_demo/20261007-161859_m0_full_s0` (M0, seed 0, built from
+  uncommitted changes). Results:
+  - validation macro-F1 0.967 (419 clips), 0 extraction failures;
+  - new signs: arkadas, hastane, sevmek and yardim F1 1.00; tamam 0.95; nerede 0.95; hoscakal 0.89; selam 0.87;
+  - main confusion: hoscakal → selam (4) and bayram → selam (2). selam attracts the other one-handed signs
+    near the face. Watch it live; cocuk is the reserve;
+  - RT-04 passed on a yardim clip (identical features).
+
+## D-13 O4 uses the demo vocabulary; logged live evaluation (2026-10-13)
+
+- **Decision (student):** the controlled webcam evaluation (O4) runs on the 21-sign demo vocabulary (D-12), not
+  the 20-class benchmark. The benchmark stays the basis of O1/O2. The offline-to-live gap (EVAL-11) compares the
+  frozen demo model's AUTSL test accuracy (21 classes, evaluated once after the freeze) with its webcam accuracy.
+- **Why:** the demo vocabulary is the system that is actually demonstrated. Three benchmark classes failed live,
+  while the demo vocabulary passed an informal check.
+- **Informal check (2026-10-13, student, written by hand, not logged):** demo M0
+  (`outputs/runs_demo/20261007-161859_m0_full_s0`), input flipped, one try per sign: 21/21 correct.
+  Confidence was 1.00 for most signs, hoscakal 0.40 and yok 0.90. This is preliminary evidence only (one signer,
+  one session, no latency recorded), not an O4 result.
+- **Tooling:**
+  - `python -m tsl.realtime --eval` logs every trial (target, prediction, top-3, confidence, latency, duration,
+    status) to `outputs/live/<session>/trials.csv`, with raw landmarks per trial for later re-scoring, and
+    `meta.json` (model, flip, camera, seed, plan, git commit);
+  - `scripts/live_report.py` computes accuracy with an exact 95% CI, macro-F1, per-class results, the confusion
+    matrix, latency median/p95, and accuracy per signer and condition.
+
+  Smoke-tested with a video replayed as a fake camera; that session was deleted.
+- **Not yet:** raw video storage (LIVE-03, team members only) and streaming extraction (O3). Logged latency
+  currently includes post-recording MediaPipe processing (~2–3 s).

@@ -45,3 +45,20 @@ python -m tsl.realtime --run outputs/runs/<run> --video data/raw/AUTSL/<clip>   
 ```
 
 The webcam input is flipped before MediaPipe by default (`demo.flip_input`, D-08).
+
+## Demo vocabulary (separate from the benchmark, D-12)
+
+```bash
+python scripts/prepare_dataset.py --config configs/demo.yaml             # outputs/manifest_demo.csv
+python scripts/extract_landmarks.py --config configs/demo.yaml --workers 4   # only uncached clips
+python -m tsl.train --config configs/demo.yaml --model m0 --subset full --seed 0   # -> outputs/runs_demo/
+python -m tsl.realtime --run outputs/runs_demo/<run> --camera 1
+```
+
+## Logged live evaluation (O4, LIVE-01..05)
+
+```bash
+python scripts/show_sign.py                      # watch reference clips first (menu)
+python -m tsl.realtime --run outputs/runs_demo/<run> --camera 1 --eval --signer jacques --condition bright --reps 2
+python scripts/live_report.py outputs/live/<session> [more sessions]   # accuracy, F1, confusion, latency
+```

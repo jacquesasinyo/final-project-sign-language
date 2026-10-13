@@ -107,3 +107,7 @@ temp/
 
 # --- Previous TÜBİTAK work (2.1 GB incl. recorded .npy data; read-only, DS-05) ---
 isolated sign language/
+
+# --- Signed proposal / Gantt (contain personal contact data) ---
+EE4297_Project_Proposal_*.docx
+Gantt_Chart_*.xlsx

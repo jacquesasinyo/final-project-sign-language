@@ -1,0 +1,6 @@
+# Demo/application vocabulary (docs/decisions.md D-12). Separate from the 20-class
+# benchmark: same data, pipeline and landmark cache, its own class list, manifest and runs.
+base: configs/default.yaml
+classes_file: configs/demo_classes.yaml
+manifest_path: outputs/manifest_demo.csv
+runs_dir: outputs/runs_demo

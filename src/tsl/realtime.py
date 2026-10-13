@@ -8,6 +8,7 @@ Usage:
     python -m tsl.realtime --run outputs/runs/<run> --video <clip.mp4>   # RT-04 check
     python -m tsl.realtime --check-hands                                  # D-08 orientation check
     python -m tsl.realtime --list-cameras                                 # find the built-in camera index
+    python -m tsl.realtime --run <run> --eval --signer jacques --condition bright --reps 2   # logged evaluation
 Add --camera N to choose a camera (macOS may give index 0 to an iPhone via Continuity Camera).
 
 Keys (live): Space = start/stop recording, f = toggle input flip, q = quit.
@@ -179,6 +180,112 @@ def live(cfg, model, labels, seq_len, flip_input):
     cv2.destroyAllWindows()
 
 
+TRIAL_FIELDS = ["trial", "target", "predicted", "correct", "confidence", "top3", "status", "latency_s",
+                "duration_s", "n_frames", "timestamp"]
+
+
+def live_eval(cfg, model, labels, seq_len, flip_input, run_dir, signer, condition, reps, seed):
+    """Logged webcam evaluation (spec LIVE-01..05): prompts each sign `reps` times in a seeded random order.
+
+    Every attempt is appended to outputs/live/<session>/trials.csv as soon as it happens, and its raw
+    landmarks are saved, so any model can be re-scored later. Too-short recordings are logged but the same
+    sign is prompted again; a recording with no hand detected counts as a failed trial.
+    """
+    import csv
+    import random
+    from datetime import datetime
+
+    from tsl.train import git_commit
+
+    d = cfg["demo"]
+    plan = [w for w in labels for _ in range(reps)]
+    random.Random(seed).shuffle(plan)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    session = Path("outputs/live") / f"{stamp}_{signer}_{condition}"
+    (session / "landmarks").mkdir(parents=True)
+    (session / "meta.json").write_text(json.dumps(dict(
+        timestamp=stamp, run=str(run_dir), signer=signer, condition=condition, reps=reps, seed=seed,
+        flip_input=flip_input, camera_index=d["camera_index"], min_seconds=d["min_seconds"],
+        max_seconds=d["max_seconds"], labels=labels, plan=plan, git_commit=git_commit()), indent=2, ensure_ascii=False))
+    log = open(session / "trials.csv", "w", newline="", encoding="utf-8")
+    writer = csv.DictWriter(log, fieldnames=TRIAL_FIELDS)
+    writer.writeheader()
+    print(f"Session: {session}  ({len(plan)} trials)")
+
+    cap = open_camera(d["camera_index"])
+    i, attempt, recording, frames, t_start = 0, 0, False, [], 0.0
+    feedback = ""
+
+    def finish(t_stop):
+        nonlocal i, attempt, feedback
+        attempt += 1
+        target, dur = plan[i], t_stop - t_start
+        row = dict(trial=i + 1, target=target, predicted="", correct=0, confidence="", top3="", status="ok",
+                   latency_s="", duration_s=round(dur, 3), n_frames=len(frames),
+                   timestamp=datetime.now().isoformat(timespec="seconds"))
+        if dur < d["min_seconds"]:
+            row["status"] = "too_short"
+            feedback = f"Too short ({dur:.1f}s) - sign '{target}' again"
+        else:
+            try:
+                raw = extract_frames(frames)
+                if np.isnan(raw["left_hand"]).all() and np.isnan(raw["right_hand"]).all():
+                    raise ValueError("no hand detected")
+                np.savez_compressed(session / "landmarks" / f"trial{i + 1:03d}_a{attempt}.npz", **raw)
+                probs = model.predict(clip_features(raw, seq_len)[None], verbose=0)[0]
+                top = np.argsort(probs)[::-1][:3]
+                row.update(predicted=labels[top[0]], correct=int(labels[top[0]] == target),
+                           confidence=round(float(probs[top[0]]), 4),
+                           top3="|".join(f"{labels[k]}:{probs[k]:.3f}" for k in top))
+                feedback = f"{'OK' if row['correct'] else 'WRONG'}: predicted {row['predicted']} ({probs[top[0]]:.2f})"
+            except (ValueError, ClipFailed) as e:
+                row["status"] = "no_hand" if "no hand" in str(e) else "failed"
+                feedback = f"No prediction ({e}) - counted as a failed trial"
+            row["latency_s"] = round(time.perf_counter() - t_stop_perf, 3)
+            i += 1
+            attempt = 0
+        writer.writerow(row)
+        log.flush()
+
+    t_stop_perf = 0.0
+    while i < len(plan):
+        ok, frame = cap.read()
+        if not ok:
+            print("Camera stopped delivering frames (disconnected?); session saved so far.")
+            break
+        if recording:
+            frames.append(cv2.flip(frame, 1) if flip_input else frame)
+            if time.monotonic() - t_start >= d["max_seconds"]:  # RT-02 auto-stop
+                recording, t_stop_perf = False, time.perf_counter()
+                finish(time.monotonic())
+                continue
+        view = cv2.flip(frame, 1)
+        put(view, f"Trial {i + 1}/{len(plan)}   SIGN: {plan[i] if i < len(plan) else ''}", 30, (0, 255, 255))
+        if recording:
+            cv2.circle(view, (view.shape[1] - 30, 30), 12, (0, 0, 255), -1)
+            put(view, f"REC {time.monotonic() - t_start:.1f}s", 60, (0, 0, 255))
+        else:
+            put(view, feedback or "Space: start recording", 60)
+        put(view, f"{signer} / {condition}   Space: record   q: stop session", view.shape[0] - 15)
+        cv2.imshow("TID live evaluation", view)
+        k = cv2.waitKey(1) & 0xFF
+        if k == ord("q"):
+            break
+        if k == ord(" "):
+            if recording:
+                recording, t_stop_perf = False, time.perf_counter()
+                put(view, "Processing...", 90)
+                cv2.imshow("TID live evaluation", view)
+                cv2.waitKey(1)
+                finish(time.monotonic())
+            else:
+                recording, frames, t_start = True, [], time.monotonic()
+    cap.release()
+    cv2.destroyAllWindows()
+    log.close()
+    print(f"Saved {i}/{len(plan)} trials to {session}. Report: python scripts/live_report.py {session}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="configs/default.yaml")
@@ -187,6 +294,11 @@ def main():
     ap.add_argument("--check-hands", action="store_true", help="D-08 handedness check (webcam)")
     ap.add_argument("--camera", type=int, help="camera index (overrides demo.camera_index in the config)")
     ap.add_argument("--list-cameras", action="store_true", help="probe camera indices 0-3")
+    ap.add_argument("--eval", action="store_true", help="logged evaluation session (LIVE): outputs/live/")
+    ap.add_argument("--signer", help="--eval: who is signing (e.g. jacques)")
+    ap.add_argument("--condition", help="--eval: recording condition (e.g. bright, dim)")
+    ap.add_argument("--reps", type=int, default=1, help="--eval: repetitions per sign")
+    ap.add_argument("--seed", type=int, default=0, help="--eval: seed of the randomised sign order")
     ap.add_argument("--flip-input", action=argparse.BooleanOptionalAction, default=None,
                     help="flip webcam frames before MediaPipe (default: demo.flip_input in the config, D-08)")
     args = ap.parse_args()
@@ -204,6 +316,10 @@ def main():
         return consistency_check(cfg, model, labels, seq_len, args.video)
     flip = cfg["demo"]["flip_input"] if args.flip_input is None else args.flip_input
     print(f"input flip: {flip}")
+    if args.eval:
+        if not (args.signer and args.condition):
+            raise SystemExit("--eval needs --signer and --condition")
+        return live_eval(cfg, model, labels, seq_len, flip, args.run, args.signer, args.condition, args.reps, args.seed)
     live(cfg, model, labels, seq_len, flip)
 
 
