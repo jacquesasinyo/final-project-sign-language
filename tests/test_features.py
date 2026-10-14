@@ -79,3 +79,18 @@ def test_live_summary():
     assert r["latency_s"]["median"] == 0.5
     lo, hi = r["accuracy_ci95"]
     assert 0 < lo < 0.5 < hi < 1
+
+
+def test_m1_shape_size_and_reload(tmp_path):
+    import keras
+    from tsl.models import build_model
+    m1 = build_model("m1", 48, N_FEATURES, 20)
+    x = np.random.default_rng(0).normal(size=(2, 48, N_FEATURES)).astype(np.float32)
+    assert m1(x).shape == (2, 20)
+    assert m1.count_params() <= build_model("m0", 48, N_FEATURES, 20).count_params() / 3  # O2
+    att = m1.layers[2]
+    w = keras.ops.convert_to_numpy(att.weights_over_time(m1.layers[1](m1.layers[0](x))))
+    np.testing.assert_allclose(w.sum(1), 1.0, rtol=1e-5)  # attention sums to 1 over time
+    m1.save(tmp_path / "m1.keras")
+    again = keras.models.load_model(tmp_path / "m1.keras")
+    np.testing.assert_allclose(again.predict(x, verbose=0), m1.predict(x, verbose=0), rtol=1e-5)

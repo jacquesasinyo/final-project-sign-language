@@ -241,3 +241,20 @@ Source: `scripts/inspect_clips.py` on 50 seeded train clips → `outputs/inspect
   Smoke-tested with a video replayed as a fake camera; that session was deleted.
 - **Not yet:** raw video storage (LIVE-03, team members only) and streaming extraction (O3). Logged latency
   currently includes post-recording MediaPipe processing (~2–3 s).
+
+## D-14 M1 configuration frozen (2026-10-14)
+
+M1 = BiGRU + dropout + temporal attention pooling (MOD-02). Tuning budget (MOD-07): 3 configs, seed 0,
+20-class benchmark, validation only.
+
+| Config | Run | Params | Val macro-F1 | Best epoch |
+|---|---|---|---|---|
+| hidden 64, dropout 0.3, lr 1e-3 | `outputs/runs/20261013-175826_m1_full_s0` | 66,453 | **0.9666** | 81/101 |
+| hidden 128, dropout 0.3, lr 1e-3 | `outputs/runs/20261014-111103_m1_full_s0` | 182,037 | 0.9541 | 22/42 |
+| hidden 64, dropout 0.5, lr 1e-3 | `outputs/runs/20261014-111244_m1_full_s0` | 66,453 | 0.9665 | 28/48 |
+
+- **Frozen: hidden 64, dropout 0.3** (highest validation macro-F1). It is effectively tied with dropout 0.5
+  (difference 0.0001, within noise). Both have 66,453 parameters, i.e. 12% of M0's 561,236 (O2 target ≤ 1/3).
+- For reference, M0 seed 0 scored 0.9694 on validation. M1 vs M0 is decided only by the 3-seed protocol
+  (MOD-08, EVAL-08), not by these single-seed numbers.
+- M0 keeps its previous-prototype settings (lr 1e-3, D-10). No M0 tuning runs were needed for the comparison.

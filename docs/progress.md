@@ -24,11 +24,13 @@ selam 0.87, hoscakal 0.89 (hoscakal→selam).
 Informal live check (D-13): demo M0, flip on, 21/21 signs correct on one try each (hoscakal 0.40, yok 0.90 confidence).
 O4 now uses the demo vocabulary; logged evaluation via `tsl.realtime --eval` + `scripts/live_report.py`.
 
+M1 implemented and frozen (D-14): BiGRU-64 + attention, 66,453 params (12% of M0), val macro-F1 0.967 (seed 0).
+
 ## Known problems / open
 - LIVE-01: decide how the 120 webcam trials are allocated.
 - PRE-06: per-sign semantic-safety check before any mirroring.
 - Open: TİD validator, course report requirements, Phase 0 table, `docs/targets.md`.
 
 ## Next step
-Logged dev session (e.g. `--reps 2`) to get the first real live metrics; decide the LIVE-01 allocation of the 120
-trials. Gantt task now (12–25 Oct): M1 on the benchmark.
+Final 3-seed runs for M0 and M1 can wait until the design freeze (augmentation may still change training).
+Gantt task 26 Oct – 8 Nov: streaming extraction + latency benchmark (O3).

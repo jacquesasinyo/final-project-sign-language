@@ -73,6 +73,9 @@ def main():
     ap.add_argument("--model", default="m0")
     ap.add_argument("--subset", choices=["smoke", "full"], default="full")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--lr", type=float, help="learning rate (overrides train.learning_rate)")
+    ap.add_argument("--hidden", type=int, help="M1 GRU units per direction (default 64)")
+    ap.add_argument("--dropout", type=float, help="M1 dropout (default 0.3)")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
@@ -87,7 +90,10 @@ def main():
     X_va, y_va, _, skip_va = load_split(cfg, "val", class_ids)
     print(f"train {X_tr.shape}, val {X_va.shape}; skipped (failed extraction): train {len(skip_tr)}, val {len(skip_va)}")
 
-    model = build_model(args.model, cfg["seq_len"], N_FEATURES, len(class_ids))
+    hp = {k: v for k, v in (("hidden", args.hidden), ("dropout", args.dropout)) if v is not None}
+    if args.lr is not None:
+        tc["learning_rate"] = args.lr
+    model = build_model(args.model, cfg["seq_len"], N_FEATURES, len(class_ids), **hp)
     model.compile(optimizer=keras.optimizers.Adam(tc["learning_rate"]),
                   loss="sparse_categorical_crossentropy", metrics=["accuracy"])  # MOD-04
     best = BestOnValF1(X_va, y_va, len(class_ids), tc["patience"])
@@ -107,7 +113,8 @@ def main():
     out.mkdir(parents=True)
     model.save(out / "model.keras")
     (out / "config.json").write_text(json.dumps(dict(
-        config=cfg, model=args.model, subset=args.subset, seed=args.seed,
+        config=cfg, model=args.model, hyperparameters=dict(hp, learning_rate=tc["learning_rate"]),
+        subset=args.subset, seed=args.seed,
         class_ids=class_ids, label_names=label_names, split="official AUTSL train/val",
         skipped=dict(train=skip_tr, val=skip_va)), indent=2, ensure_ascii=False))
     (out / "env.json").write_text(json.dumps(dict(
