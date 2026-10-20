@@ -2,7 +2,12 @@
 
 Signer-independent isolated TİD recognition on a fixed 20-class subset of AUTSL,
 using MediaPipe hand and upper-body pose landmarks. Spec: `PROJECT_REQUIREMENTS.md`.
-Decisions: `docs/decisions.md`.
+Decisions: `docs/decisions.md`. Current status and next step: `docs/progress.md`.
+
+A fresh clone contains only code, configs and docs. The dataset (`data/`), landmark cache, manifests and
+trained runs (`outputs/`) are gitignored, so they are rebuilt with the steps below (download ~13 GB,
+landmark extraction ~65 min, each training run a few minutes). Run paths in `docs/` refer to the original
+machine; your own runs get new timestamped folder names.
 
 ## Environment (macOS, Python 3.12)
 
@@ -39,6 +44,7 @@ pytest -q
 python scripts/extract_landmarks.py --workers 4               # ~65 min on an M1; resumable
 python -m tsl.train --model m0 --subset smoke --seed 0         # 10-class smoke test
 python -m tsl.train --model m0 --subset full --seed 0          # 20 classes; val metrics only
+python -m tsl.train --model m1 --subset full --seed 0          # M1 BiGRU + attention, frozen config (D-14)
 python -m tsl.realtime --list-cameras
 python -m tsl.realtime --run outputs/runs/<run> --camera 1     # Space = record, q = quit
 python -m tsl.realtime --run outputs/runs/<run> --video data/raw/AUTSL/<clip>   # RT-04 check
@@ -52,6 +58,7 @@ The webcam input is flipped before MediaPipe by default (`demo.flip_input`, D-08
 python scripts/prepare_dataset.py --config configs/demo.yaml             # outputs/manifest_demo.csv
 python scripts/extract_landmarks.py --config configs/demo.yaml --workers 4   # only uncached clips
 python -m tsl.train --config configs/demo.yaml --model m0 --subset full --seed 0   # -> outputs/runs_demo/
+python -m tsl.train --config configs/demo.yaml --model m1 --subset full --seed 0   # demo M1
 python -m tsl.realtime --run outputs/runs_demo/<run> --camera 1
 ```
 

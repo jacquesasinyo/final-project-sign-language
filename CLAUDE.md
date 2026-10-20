@@ -81,7 +81,7 @@ Pinned: Python 3.12.8, MediaPipe 0.10.21 (legacy Holistic), TensorFlow 2.19.1 / 
 - Manifest + stats: `python scripts/prepare_dataset.py && python scripts/dataset_stats.py`
 - Tests: `pytest -q`
 - Extract landmarks (~65 min, resumable): `python scripts/extract_landmarks.py --workers 4`
-- Train: `python -m tsl.train --model m0 --subset {smoke,full} --seed 0`
+- Train: `python -m tsl.train --model {m0,m1} --subset {smoke,full} --seed 0` (M1 frozen at hidden 64, dropout 0.3, D-14)
 - Demo: `python -m tsl.realtime --run outputs/runs/<run> --camera <idx>` (`--list-cameras`, `--check-hands`)
 - RT-04 check: `python -m tsl.realtime --run outputs/runs/<run> --video data/raw/AUTSL/<clip from manifest>`
 - Demo vocabulary (D-12): add `--config configs/demo.yaml` to prepare/extract/train; runs go to `outputs/runs_demo/`

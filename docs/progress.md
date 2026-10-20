@@ -25,6 +25,8 @@ Informal live check (D-13): demo M0, flip on, 21/21 signs correct on one try eac
 O4 now uses the demo vocabulary; logged evaluation via `tsl.realtime --eval` + `scripts/live_report.py`.
 
 M1 implemented and frozen (D-14): BiGRU-64 + attention, 66,453 params (12% of M0), val macro-F1 0.967 (seed 0).
+Demo M1 (frozen config, demo vocabulary, seed 0): `outputs/runs_demo/20261020-161508_m1_full_s0`, val macro-F1 0.957
+(M0 0.967; 18 vs 14 errors of 419). RT-04 passes with M1. Live test of demo M1 pending.
 
 ## Known problems / open
 - LIVE-01: decide how the 120 webcam trials are allocated.

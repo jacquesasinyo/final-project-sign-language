@@ -29,6 +29,7 @@ from tsl.utils import load_config
 
 def load_run(run_dir):
     import keras
+    import tsl.models  # noqa: F401  registers custom layers (M1 AttentionPool) before loading
     run_dir = Path(run_dir)
     meta = json.loads((run_dir / "config.json").read_text())
     if not (run_dir / "model.keras").exists():
